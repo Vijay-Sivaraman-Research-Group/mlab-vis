@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+<script>
+$.postJSON = function(url, data, callback) {
+    return $.ajax({
+        "type": "POST",
+        "url": url,
+        "dataType": "json",
+        "contentType": "application/json; charset=utf-8",
+        "data": JSON.stringify(data),
+        "success": callback
+    });
+};
+</script>
+
+
+<script>
+$(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip(); 
+});
+</script>
+<script>
+$.deleteJSON = function(url, callback) {
+    return $.ajax({
+        "type": "DELETE",
+        "url": url,
+        "dataType": "json",
+        "contentType": "application/json; charset=utf-8",
+        "success": callback
+    });
+};
+</script>
+
+<script>
+$(document).ready(function(){
+    
+    $.getJSON("http://130.211.140.93/flasktest1/isps",function(data,status){
+            var output="";
+	    var previous="";
+	    data=JSON.parse(data.isps);
+
+	    
+            for (var i in data) {
+		
+		if (previous!=data[i].country){
+		    output+='<b>'+data[i].country+'</b><br />';
+		}  
+		output+='<input type="checkbox" value="' +data[i].isp+ '" name="isp"/> ' +data[i].isp+ '<br />';
+		previous= data[i].country;
+            }
+	    
+            document.getElementById("isps").innerHTML=output;
+    })
+    
+    $.getJSON("http://130.211.140.93/flasktest1/parameters",function(data,status){
+            var output="<select class='form-control' id='parameter'>";
+            for (var i in data.parameters) {
+		    output+='<option value="' +data.parameters[i]+ '" name="parameter"/> ' +data.parameters[i]+ '<br />';
+            }
+              output+="<\select>"
+            document.getElementById("parameters").innerHTML=output;
+    })
+    
+    $('#visualise').click(function(){
+        
+	var plotSettings = '[{'
+	+'"year": "'+ $("#year").val()+'",'
+	+'"month": "'+ $("#month").val()+'",'
+	+'"day": "'+ $("#day").val()+'",'
+	+'"aggregation": "'+ $("#aggregation").val()+'",'
+	+'"parameters": "'+ $("#parameter").val()+'",'
+	+'"format": "'+ $("#format").val()+'",'
+                          
+	
+	
+	var checkboxes = document.getElementsByName('facet');
+	for (var i=0, n=checkboxes.length;i<n;i++) {
+	    if (checkboxes[i].checked) {
+		plotSettings += '"'+checkboxes[i].value+'": true';
+	    } else {
+		plotSettings += '"'+checkboxes[i].value+'": false';
+	    }
+	    
+		plotSettings+=',';
+	    
+	}
+	
+	plotSettings+='"isp": {';
+	
+	var checkboxes = document.getElementsByName('isp');
+	for (var i=0, n=checkboxes.length;i<n;i++) {
+	    if (checkboxes[i].checked) {
+		plotSettings += '"'+checkboxes[i].value+'": true';
+	    } else {
+		plotSettings += '"'+checkboxes[i].value+'": false';
+	    }
+	    if(i<(n-1)){
+		plotSettings+=',';
+	    }
+	}
+    
+	plotSettings+='}, "ip": {';
+	
+	plotSettings+='"IP1": "'+ $("#IP1").val()+'",'
+	+'"IP2": "'+ $("#IP2").val()+'",'
+	+'"IP3": "'+ $("#IP3").val()+'",'
+	+'"IP4": "'+ $("#IP4").val()+'",'
+	+'"IP5": "'+ $("#IP5").val()+'"';
+	
+	plotSettings+='}}]';
+    
+	$.postJSON("http://130.211.140.93/flasktest1/visualise", plotSettings, function(data,status){
+            
+               if (data.status == true){
+               output='<div class="row" style="background-color: #D8D8D8; padding: 25px; margin-top: 20px;border-radius: 15px" id="plotArea"><center>';
+               output+="<img src =' data:image/jpg;base64,"+ data.application+"' style='max-width:100%;max-height:90%' />";
+               output+='</center></div>';
+               
+               document.getElementById("img").innerHTML=output;
+               
+               $("body").scrollTop($("#img").offset().top);
+               }
+               if(data.status==false){
+               alert(data.reason)
+               }
+        });
+    });
+    
+});
+</script>	
+
+</head>
+
+<body>
+
+<div class="container">
+    <div class="row" style="margin-bottom: 20px">
+	<div class="jumbotron">
+	    <h2><span class="label label-success">M-Lab</span> Web Interface</h2>
+	</div>
+    </div>
+
+    
+    
+    <div class="row" id="plotSettings" style="background-color: #A4A4A4; padding: 15px;border-bottom-left-radius: 0px;border-top-left-radius: 15px;border-bottom-right-radius: 0px;border-top-right-radius: 15px">
+        <div class="col-md-3">
+		<label for="time_period"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="What time period should the plot cover">Time Period</a></label><br>
+		<label for="year"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select the year you want to plot">Year:</a></label>
+                    <select class="form-control" id="year">
+                        <option>2015</option><option>2014</option><option>2013</option><option>2012</option><option>2011</option>
+                    </select>
+		<label for="month"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select the month that you want to plot, leave on 'all' for a yearly plot">Month:</a></label>
+                    <select class="form-control" id="month">
+                        <option>All</option><option>1</option><option>2</option><option>3</option><option>4</option>
+                        <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+			<option>11</option><option>12</option>
+                    </select>
+		<label for="day"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select the day that you want to plot, leave on 'all' for a yearly or monthly plot">Day:</a></label>
+                    <select class="form-control" id="day" disabled="disabled">
+                        <option>All</option><option>1</option><option>2</option><option>3</option><option>4</option>
+                        <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+		        <option>11</option><option>12</option><option>13</option><option>14</option>
+                        <option>15</option><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option>
+		    	<option>21</option><option>22</option><option>23</option><option>24</option>
+                        <option>25</option><option>26</option><option>27</option><option>28</option><option>29</option><option>30</option>
+			<option>31</option>
+                    </select>
+        
+            <label for="aggregation" style="margin-top: 10px"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select the time aggregation for the plot">Time Aggregation:</a></label><br>
+            <select class="form-control" id="aggregation">
+                <option  name="aggregation" value="hour">Hour<br>
+                <option name="aggregation" value="day">Day<br>
+                <option name="aggregation" value="month">Month<br>
+            </select>
+	</div>
+	
+	<div class="col-md-3">
+        <label for="facet" style="margin-top: 10px"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select whether the chart should be facet or non facet, defualt is non facet">Chart Type:</a></label><br>
+        <input type="checkbox" name="facet" value="facet"> Facet<br>
+        <label for="parameters"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select the parameters that will be plotted">Parameters:</a></label>
+	    <div id="parameters">
+	    </div>
+	    <label for="format" style="margin-top: 10px"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select the format of the data, raw is the raw data, while normalised is the data normlaised by month">Format:</a></label><br>
+        
+        <select class="form-control" id="format">
+	    <option name="format" value="raw"> Raw<br>
+	    <option name="format" value="norm"> Normalised
+            </select>
+	</div>
+	
+	<div class="col-md-3">
+	    <label for="isp"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Select which ISPs you want to include in th plot, can be left blank if IP address are selected">ISP:</a></label>
+	    <div id="isps" style="border:1px solid; height: 250px; overflow-y: scroll;padding: 5px; padding-left: 10px; background-color: #D8D8D8;border-radius: 5px">
+	    </div>
+	</div>
+	
+	<div class="col-md-3">
+	    <label for="ip"><a style="color: black; text-decoration: none;" data-toggle="tooltip" title="Input single IP addresses that you want to plot, can be left blank if ISP(s) are selected">IP Addresses:</a></label><br>
+            <input type="text" class="form-control" id="IP1" placeholder="IP Address 1"><br>
+	    <input type="text" class="form-control" id="IP2" placeholder="IP Address 2"><br>
+	    <input type="text" class="form-control" id="IP3" placeholder="IP Address 3"><br>
+	    <input type="text" class="form-control" id="IP4" placeholder="IP Address 4"><br>
+	    <input type="text" class="form-control" id="IP5" placeholder="IP Address 5">	
+	</div>
+    </div>
+    
+    <div class="row" id="plotSend" style="background-color: #A4A4A4; padding: 15px;border-bottom-left-radius: 15px;border-top-left-radius: 0px;border-bottom-right-radius: 15px;border-top-right-radius: 0px">
+	<center>
+	    <button type="button"  id="visualise" class="btn btn-primary">Visualise</button>
+	</center>
+    </div>
+    
+    <div id="img"></div>
+    
+    <div class="row" style="margin-top: 50px">
+	<div class="jumbotron">
+	    
+	</div>
+    </div>
+</div>
+
+</body>
+</html>
